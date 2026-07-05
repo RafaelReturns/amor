@@ -412,61 +412,52 @@
         }
 
         // Generate target coordinates based on uploaded Image
-        function processImageTargets(imgElement) {
-            const iCanvas = document.createElement('canvas');
-            const iCtx = iCanvas.getContext('2d', { willReadFrequently: true });
-            
-            // Determine sizing to fit nicely in the center (max 80% width, max 40% height)
-            const maxW = width * 0.8;
-            const maxH = height * 0.45;
-            let iw = imgElement.width;
-            let ih = imgElement.height;
-            let scale = Math.min(maxW / iw, maxH / ih);
-            
-            iw = Math.floor(iw * scale);
-            ih = Math.floor(ih * scale);
-            
-            iCanvas.width = iw;
-            iCanvas.height = ih;
-            iCtx.drawImage(imgElement, 0, 0, iw, ih);
-            
-            const imgData = iCtx.getImageData(0, 0, iw, ih).data;
-            let validPoints = [];
-            
-            // Y offset to put image centrally, slightly above the quote
-            const startX = cx - iw/2;
-            const startY = cy - ih/2;
-            
-            // Scan pixels
-            // Step size optimizes processing and density
-            const step = window.innerWidth < 600 ? 2 : 3; 
-            
-            for (let y = 0; y < ih; y += step) {
-                for (let x = 0; x < iw; x += step) {
-                    let idx = (y * iw + x) * 4;
-                    let r = imgData[idx];
-                    let g = imgData[idx+1];
-                    let b = imgData[idx+2];
-                    let a = imgData[idx+3];
-                    
-                    if (a > 20) {
-                        // Calculate brightness
-                        let brightness = (r + g + b) / 3;
-                        // Higher probability of adding a particle if pixel is bright
-                        let probability = (brightness / 255) * 0.8 + 0.2; 
-                        
-                        if (Math.random() < probability) {
-                            validPoints.push({
-                                x: startX + x,
-                                y: startY + y,
-                                r: r,
-                                g: g,
-                                b: b
-                            });
-                        }
-                    }
-                }
+       function processImageTargets(imgElement) {
+    const iCanvas = document.createElement('canvas');
+    const iCtx = iCanvas.getContext('2d');
+    
+    const maxW = width * 0.6;
+    const maxH = height * 0.4;
+    const iw = imgElement.width;
+    const ih = imgElement.height;
+    const scale = Math.min(maxW / iw, maxH / ih);
+
+    const w = Math.floor(iw * scale);
+    const h = Math.floor(ih * scale);
+
+    iCanvas.width = w;
+    iCanvas.height = h;
+    iCtx.drawImage(imgElement, 0, 0, w, h);
+
+    const imgData = iCtx.getImageData(0, 0, w, h).data;
+    let validPoints = [];
+
+    const startX = cx - w / 2;
+    const startY = cy - h / 2;
+    
+    // Detalları artırmaq üçün step-i 1 və ya 2 edin
+    const step = 1; 
+
+    for (let y = 0; y < h; y += step) {
+        for (let x = 0; x < w; x += step) {
+            const idx = (y * w + x) * 4;
+            if (imgData[idx + 3] > 128) {
+                validPoints.push({ x: startX + x, y: startY + y });
             }
+        }
+    }
+
+    particles.forEach((p, i) => {
+        if (i < validPoints.length) {
+            const target = validPoints[i];
+            p.tx = target.x;
+            p.ty = target.y;
+            p.isImage = true;
+        } else {
+            p.isImage = false;
+        }
+    });
+}
             
             // If the image was totally black/transparent or empty, fallback
             if (validPoints.length === 0) {
